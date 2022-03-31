@@ -294,39 +294,6 @@
         return true;
     }
 
-    public static bool FollowGuide2(int x, int y, int currNum, Direction dir, bool lost, int[,] grid) {
-        int length = grid.GetLength(0);
-        int width = grid.GetLength(1);
-
-        //Check every direction starting with current direction
-        Direction nextDir = dir;
-        do {
-            if((currNum > ((length + 1) / 2) * ((width + 1) / 2))) return true;
-
-            var (i, j) = ConvertDirection(ComplementDirection(nextDir));
-            if(!(x >= length || x < 0 || y >= width || y < 0 || (grid[x, y] != 0 && grid[x, y] != -2))) {
-
-                if(!(x + i >= length || x + i < 0 || y + j >= width || y + j < 0)) {
-                    if(!((x == 0 || x == length - 1) && (y == 0 || y == width - 1)) && grid[x + i, y + j] != -1) {
-                        if(!lost) lost = true;
-                        else return false;
-                    } else 
-                        lost = false;
-
-                    if(grid[x, y] == 0) {
-                        grid[x, y] = currNum++;
-                    }
-                }
-            }
-            dir = nextDir;
-            nextDir = ComplementDirection(nextDir);
-            x += i;
-            y += j;
-        } while(nextDir != dir); 
-
-        return false;
-    }
-
     public static Direction ComplementDirection(Direction dir) {
         Direction nextDir = dir switch {
             Direction.Right => Direction.Down,
