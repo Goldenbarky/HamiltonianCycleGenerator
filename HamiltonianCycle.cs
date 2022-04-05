@@ -1,36 +1,76 @@
-﻿class HamiltonianCycle {
+﻿
+class HamiltonianCycle {
 
-    public enum Direction { Left, Down, Right, Up };
+    public enum Direction { Left, Down, Right, Up }
     public static void Main(string []args) {
-        if(args.Length < 2) return;
-
-        int len = int.Parse(args[0]);
-        int width = int.Parse(args[1]);
         
-        int[,] grid = CreateHamiltonianGuide(len, width);
+        int width;
+        if (args.Length > 0) {
+            if (!int.TryParse( args[ 0 ], out width)) {
+                width = GetUserInput("Enter width: ");
+            }
+        }
+        else {
+            width = GetUserInput("Enter width: ");
+        }
         
-        //Console.WriteLine("Hamiltonian Guide:");
-        //PrintGrid(grid, false);
+        int height;
+        if (args.Length > 1) {
+            if (!int.TryParse(args[ 1 ], out height)) {
+                height = GetUserInput("Enter height: ");
+            }
+        } 
+        else {
+            height = GetUserInput("Enter height: ");
+        }
+        
+        int[,] grid = CreateHamiltonianGuide(height, width);
 
         Console.WriteLine("Drawing pathway...");
         if(!FollowGuide(0, 0, 1, Direction.Right, grid))
             Console.WriteLine("Failiure >:(");
-        
-        //PrintGrid(grid, false);
+
+        if ((args.Any(s=>s.Equals("--verbose") || s.Equals("-v")))) {
+            Console.WriteLine("Hamiltonian Guide:");
+            PrintGrid(grid, false);
+        }
 
         grid = CleanUpGrid(grid);
         
-        string filePath = $"{len}x{width}.txt";
+        string filePath = $"{width}x{height}.txt";
         using (StreamWriter fs = new StreamWriter(filePath)) {
-            for(int i = 0; i < len; i++) {
-                for(int j = 0; j < width; j++) {
-                    fs.Write($"{grid[i, j], 8}");
+            if ( args.Any( s => s.Equals( "--order" ) || s.Equals( "-O" ) ) )
+            {
+                // Print the cell order in which to go
+            }
+            else
+            {
+                for ( int i = 0; i < height; i++ )
+                {
+                    for ( int j = 0; j < width; j++ )
+                    {
+                        fs.Write( $"{grid[ i, j ],8}" );
+                    }
+
+                    fs.Write( "\n" );
                 }
-                fs.Write("\n");
             }
         }
         
         Console.WriteLine($"Hamiltonian Cycle found! Created {filePath}");
+    }
+
+    static int GetUserInput(string message) {
+        int userInput;
+        bool done = false;
+        do {
+            Console.Write(message);
+            if (int.TryParse(Console.ReadLine(), out userInput)) {
+                done = true;
+            }
+        } while (!done);
+
+        return userInput;
     }
 
     public static (int, int) ConvertDirection(Direction dir) {
@@ -207,23 +247,25 @@
         int widthGrid = grid.GetLength(1);
 
         for(int x = 0; x < lenGrid; x++) {
-            for(int y = 0; y < widthGrid; y++) {
-                if(x % 2 == 0 && y % 2 == 0) {
-                    grid[x,y] = 0;
-                } else if (x % 2 == 1 && y % 2 == 1) {
-                    grid[x, y] = -1;
-                } else {
-                    grid[x, y] = -2;
-                }
+            for(int y = 0; y < widthGrid; y++)
+            {
+                grid[x, y] = ( x % 2 , y % 2 ) switch {
+                    (0,0) => 0,
+                    (1,1) => -1,
+                    _ => -2,
+                };
             }
         }
 
         for(int x = 0; x < lenWalls; x++) {
             for(int y = 0; y < widthWalls; y++) {
-                if(x % 2 == 1 && y % 2 == 1) continue;
-                else if(x % 2 == 0 && y % 2 == 0) {
-                    grid[x * 2 + 1, y * 2 + 1] = -1;
-                    continue;
+                switch ( (x % 2, y % 2) )
+                {
+                    case (1, 1):
+                        continue;
+                    case (0, 0):
+                        grid[x * 2 + 1, y * 2 + 1] = -1;
+                        continue;
                 }
 
                 if(walls[x, y] == -1) continue;
@@ -333,6 +375,7 @@
             Direction.Down => Direction.Left,
             Direction.Left => Direction.Up,
             Direction.Up => Direction.Right,
+            _ => throw new ArgumentOutOfRangeException( nameof( dir ), dir, null ),
         };
 
         return nextDir;
@@ -344,6 +387,7 @@
             Direction.Down => Direction.Up,
             Direction.Left => Direction.Right,
             Direction.Up => Direction.Down,
+            _ => throw new ArgumentOutOfRangeException( nameof( dir ), dir, null ),
         };
 
         return nextDir;
