@@ -27,8 +27,11 @@ class HamiltonianCycle {
         int[,] grid = CreateHamiltonianGuide(height, width);
 
         Console.WriteLine("Drawing pathway...");
-        if(!FollowGuide(0, 0, 1, Direction.Right, grid))
-            Console.WriteLine("Failiure >:(");
+        if (FollowGuide(0, 0, 1, Direction.Right, grid) is var values) {
+            if (!values.Item1) {
+                Console.WriteLine("Failiure >:(");
+            }
+        }
 
         if ((args.Any(s=>s.Equals("--verbose") || s.Equals("-v")))) {
             Console.WriteLine("Hamiltonian Guide:");
@@ -39,16 +42,15 @@ class HamiltonianCycle {
         
         string filePath = $"{width}x{height}.txt";
         using (StreamWriter fs = new StreamWriter(filePath)) {
-            if ( args.Any( s => s.Equals( "--order" ) || s.Equals( "-O" ) ) )
-            {
+            if ( args.Any( s => s.Equals( "--order" ) || s.Equals( "-O" ) ) ) {
                 // Print the cell order in which to go
+                for ( int i = 0; i < width * height; ++i ) {
+                    fs.Write($"{values.Item2[i].Item1},{values.Item2[i].Item2} ");
+                }
             }
-            else
-            {
-                for ( int i = 0; i < height; i++ )
-                {
-                    for ( int j = 0; j < width; j++ )
-                    {
+            else {
+                for ( int i = 0; i < height; i++ ) {
+                    for ( int j = 0; j < width; j++ ) {
                         fs.Write( $"{grid[ i, j ],8}" );
                     }
 
@@ -290,11 +292,11 @@ class HamiltonianCycle {
         
     }
 
-    public static bool FollowGuide(int x, int y, int currNum, Direction dir, int[,] grid) {
+    public static (bool, (int,int)[]) FollowGuide(int x, int y, int currNum, Direction dir, int[,] grid) {
         int length = grid.GetLength(0);
         int width = grid.GetLength(1);
 
-        bool lost = false;
+        (int, int)[] orderVals = new (int, int)[length * width];
 
         while(currNum <= ((length + 1) / 2) * ((width + 1) / 2)) {
             //Locate direction the wall should be in
@@ -302,6 +304,7 @@ class HamiltonianCycle {
 
             //Base case
             //If wall is not to our right, we're lost
+            bool lost;
             if(x + i >= length || x + i < 0 || y + j >= width || y + j < 0 || grid[x, y] == -1) {
                 (i, j) = ConvertDirection(dir);
                 x -= i;
@@ -315,7 +318,9 @@ class HamiltonianCycle {
                 lost = false;
             
             //If current tile is a node number it
-            if(grid[x, y] == 0) {
+            if(grid[x, y] == 0)
+            {
+                orderVals[currNum - 1] = (x, y);
                 grid[x, y] = currNum++;
                 //PrintGrid(grid, false);
             }
@@ -325,7 +330,6 @@ class HamiltonianCycle {
                 //If hit a wall, invert wall direction for new dir
                 //Otherwise move in the direction the wall previously was
                 dir = (x + i < length && x + i >= 0 && y + j < width && y + j >= 0 && grid[x + i, y + j] == -1) ? InvertDirection(ComplementDirection(dir)) : ComplementDirection(dir);
-                lost = false;
             }
 
             (i, j) = ConvertDirection(dir);
@@ -333,7 +337,7 @@ class HamiltonianCycle {
             y += j;
         }
 
-        return true;
+        return (true, orderVals);
     }
 
     public static bool FollowGuide2(int x, int y, int currNum, Direction dir, bool lost, int[,] grid) {
@@ -369,29 +373,22 @@ class HamiltonianCycle {
         return false;
     }
 
-    public static Direction ComplementDirection(Direction dir) {
-        Direction nextDir = dir switch {
+    public static Direction ComplementDirection(Direction dir) => dir switch {
             Direction.Right => Direction.Down,
             Direction.Down => Direction.Left,
             Direction.Left => Direction.Up,
             Direction.Up => Direction.Right,
-            _ => throw new ArgumentOutOfRangeException( nameof( dir ), dir, null ),
+            _ => throw new ArgumentOutOfRangeException(nameof(dir), dir, null),
         };
 
-        return nextDir;
-    }
-
-    public static Direction InvertDirection(Direction dir) {
-        Direction nextDir = dir switch {
+    public static Direction InvertDirection(Direction dir) => dir switch {
             Direction.Right => Direction.Left,
             Direction.Down => Direction.Up,
             Direction.Left => Direction.Right,
             Direction.Up => Direction.Down,
-            _ => throw new ArgumentOutOfRangeException( nameof( dir ), dir, null ),
+            _ => throw new ArgumentOutOfRangeException(nameof(dir), dir, null),
         };
 
-        return nextDir;
-    }
 
     public static int[,] CleanUpGrid(int[,] grid) {
         int length = grid.GetLength(0);
