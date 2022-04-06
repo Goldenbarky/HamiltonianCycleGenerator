@@ -1,36 +1,79 @@
-﻿class HamiltonianCycle {
+﻿
+class HamiltonianCycle {
 
-    public enum Direction { Left, Down, Right, Up };
+    public enum Direction { Left, Down, Right, Up }
     public static void Main(string []args) {
-        if(args.Length < 2) return;
-
-        int len = int.Parse(args[0]);
-        int width = int.Parse(args[1]);
         
-        int[,] grid = CreateHamiltonianGuide(len, width);
+        int width;
+        if (args.Length > 0) {
+            if (!int.TryParse( args[ 0 ], out width)) {
+                width = GetUserInput("Enter width: ");
+            }
+        }
+        else {
+            width = GetUserInput("Enter width: ");
+        }
         
-        //Console.WriteLine("Hamiltonian Guide:");
-        //PrintGrid(grid, false);
+        int height;
+        if (args.Length > 1) {
+            if (!int.TryParse(args[ 1 ], out height)) {
+                height = GetUserInput("Enter height: ");
+            }
+        } 
+        else {
+            height = GetUserInput("Enter height: ");
+        }
+        
+        int[,] grid = CreateHamiltonianGuide(height, width);
 
         Console.WriteLine("Drawing pathway...");
-        if(!FollowGuide(0, 0, 1, Direction.Right, grid))
-            Console.WriteLine("Failiure >:(");
-        
-        //PrintGrid(grid, false);
+        if (FollowGuide(0, 0, 1, Direction.Right, grid) is var values) {
+            if (!values.Item1) {
+                Console.WriteLine("Failiure >:(");
+            }
+        }
+
+        if ((args.Any(s=>s.Equals("--verbose") || s.Equals("-v")))) {
+            Console.WriteLine("Hamiltonian Guide:");
+            PrintGrid(grid, false);
+        }
 
         grid = CleanUpGrid(grid);
         
-        string filePath = $"{len}x{width}.txt";
+        string filePath = $"{width}x{height}.txt";
         using (StreamWriter fs = new StreamWriter(filePath)) {
-            for(int i = 0; i < len; i++) {
-                for(int j = 0; j < width; j++) {
-                    fs.Write($"{grid[i, j], 8}");
+            if ( args.Any( s => s.Equals( "--order" ) || s.Equals( "-O" ) ) ) {
+                // Print the cell order in which to go
+                for ( int i = 0; i < width * height; ++i ) {
+                    // + 1 is redundant atm
+                    fs.Write($"{(values.Item2[i].Item2 + 1) / 2},{(values.Item2[i].Item1 + 1) / 2} ");
                 }
-                fs.Write("\n");
+            }
+            else {
+                for ( int i = 0; i < height; i++ ) {
+                    for ( int j = 0; j < width; j++ ) {
+                        fs.Write( $"{grid[ i, j ],8}" );
+                    }
+
+                    fs.Write( "\n" );
+                }
             }
         }
         
         Console.WriteLine($"Hamiltonian Cycle found! Created {filePath}");
+    }
+
+    static int GetUserInput(string message) {
+        int userInput;
+        bool done = false;
+        do {
+            Console.Write(message);
+            if (int.TryParse(Console.ReadLine(), out userInput)) {
+                done = true;
+            }
+        } while (!done);
+
+        return userInput;
     }
 
     public static (int, int) ConvertDirection(Direction dir) {
@@ -208,24 +251,26 @@
 
         //Populate grid with 0 for final nodes, -1 for walls between nodes and -2 for useless spaces
         for(int x = 0; x < lenGrid; x++) {
-            for(int y = 0; y < widthGrid; y++) {
-                if(x % 2 == 0 && y % 2 == 0) {
-                    grid[x,y] = 0;
-                } else if (x % 2 == 1 && y % 2 == 1) {
-                    grid[x, y] = -1;
-                } else {
-                    grid[x, y] = -2;
-                }
+            for(int y = 0; y < widthGrid; y++)
+            {
+                grid[x, y] = ( x % 2 , y % 2 ) switch {
+                    (0,0) => 0,
+                    (1,1) => -1,
+                    _ => -2,
+                };
             }
         }
 
         //Turn each wall in the tree into it's 2 grid counterparts
         for(int x = 0; x < lenWalls; x++) {
             for(int y = 0; y < widthWalls; y++) {
-                if(x % 2 == 1 && y % 2 == 1) continue;
-                else if(x % 2 == 0 && y % 2 == 0) {
-                    grid[x * 2 + 1, y * 2 + 1] = -1;
-                    continue;
+                switch ( (x % 2, y % 2) )
+                {
+                    case (1, 1):
+                        continue;
+                    case (0, 0):
+                        grid[x * 2 + 1, y * 2 + 1] = -1;
+                        continue;
                 }
 
                 if(walls[x, y] == -1) continue;
@@ -252,11 +297,11 @@
         
     }
 
-    public static bool FollowGuide(int x, int y, int currNum, Direction dir, int[,] grid) {
+    public static (bool, (int,int)[]) FollowGuide(int x, int y, int currNum, Direction dir, int[,] grid) {
         int length = grid.GetLength(0);
         int width = grid.GetLength(1);
 
-        bool lost = false;
+        (int, int)[] orderVals = new (int, int)[length * width];
 
         while(currNum <= ((length + 1) / 2) * ((width + 1) / 2)) {
             //Locate direction the wall should be in
@@ -264,6 +309,7 @@
 
             //Base case
             //If wall is not to our right, we're lost
+            bool lost;
             if(x + i >= length || x + i < 0 || y + j >= width || y + j < 0 || grid[x, y] == -1) {
                 (i, j) = ConvertDirection(dir);
                 x -= i;
@@ -277,7 +323,9 @@
                 lost = false;
             
             //If current tile is a node number it
-            if(grid[x, y] == 0) {
+            if(grid[x, y] == 0)
+            {
+                orderVals[currNum - 1] = (x, y);
                 grid[x, y] = currNum++;
                 //PrintGrid(grid, false);
             }
@@ -287,7 +335,6 @@
                 //If hit a wall, invert wall direction for new dir
                 //Otherwise move in the direction the wall previously was
                 dir = (x + i < length && x + i >= 0 && y + j < width && y + j >= 0 && grid[x + i, y + j] == -1) ? InvertDirection(ComplementDirection(dir)) : ComplementDirection(dir);
-                lost = false;
             }
 
             (i, j) = ConvertDirection(dir);
@@ -295,30 +342,58 @@
             y += j;
         }
 
-        return true;
+        return (true, orderVals);
     }
 
-    public static Direction ComplementDirection(Direction dir) {
-        Direction nextDir = dir switch {
+    public static bool FollowGuide2(int x, int y, int currNum, Direction dir, bool lost, int[,] grid) {
+        int length = grid.GetLength(0);
+        int width = grid.GetLength(1);
+
+        //Check every direction starting with current direction
+        Direction nextDir = dir;
+        do {
+            if((currNum > ((length + 1) / 2) * ((width + 1) / 2))) return true;
+          
+            var (i, j) = ConvertDirection(ComplementDirection(nextDir));
+            if(!(x >= length || x < 0 || y >= width || y < 0 || (grid[x, y] != 0 && grid[x, y] != -2))) {
+
+                if(!(x + i >= length || x + i < 0 || y + j >= width || y + j < 0)) {
+                    if(!((x == 0 || x == length - 1) && (y == 0 || y == width - 1)) && grid[x + i, y + j] != -1) {
+                        if(!lost) lost = true;
+                        else return false;
+                    } else 
+                        lost = false;
+
+                    if(grid[x, y] == 0) {
+                        grid[x, y] = currNum++;
+                    }
+                }
+            }
+            dir = nextDir;
+            nextDir = ComplementDirection(nextDir);
+            x += i;
+            y += j;
+        } while(nextDir != dir); 
+
+        return false;
+    }
+
+    public static Direction ComplementDirection(Direction dir) => dir switch {
             Direction.Right => Direction.Down,
             Direction.Down => Direction.Left,
             Direction.Left => Direction.Up,
             Direction.Up => Direction.Right,
+            _ => throw new ArgumentOutOfRangeException(nameof(dir), dir, null),
         };
 
-        return nextDir;
-    }
-
-    public static Direction InvertDirection(Direction dir) {
-        Direction nextDir = dir switch {
+    public static Direction InvertDirection(Direction dir) => dir switch {
             Direction.Right => Direction.Left,
             Direction.Down => Direction.Up,
             Direction.Left => Direction.Right,
             Direction.Up => Direction.Down,
+            _ => throw new ArgumentOutOfRangeException(nameof(dir), dir, null),
         };
 
-        return nextDir;
-    }
 
     public static int[,] CleanUpGrid(int[,] grid) {
         int length = grid.GetLength(0);
