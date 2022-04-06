@@ -45,7 +45,8 @@ class HamiltonianCycle {
             if ( args.Any( s => s.Equals( "--order" ) || s.Equals( "-O" ) ) ) {
                 // Print the cell order in which to go
                 for ( int i = 0; i < width * height; ++i ) {
-                    fs.Write($"{values.Item2[i].Item1},{values.Item2[i].Item2} ");
+                    // + 1 is redundant atm
+                    fs.Write($"{(values.Item2[i].Item2 + 1) / 2},{(values.Item2[i].Item1 + 1) / 2} ");
                 }
             }
             else {
