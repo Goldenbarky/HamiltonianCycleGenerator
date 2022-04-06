@@ -76,30 +76,33 @@ class HamiltonianCycle {
         return userInput;
     }
 
-    public static (int, int) ConvertDirection(Direction dir) {
-        int xDir = 0, yDir = 0;
-        
-        switch(dir) {
-            case Direction.Up:
-                xDir = -1;
-                yDir = 0;
-                break;
-            case Direction.Down:
-                xDir = 1;
-                yDir = 0;
-                break;
-            case Direction.Left:
-                xDir = 0;
-                yDir = -1;
-                break;
-            case Direction.Right:
-                xDir = 0;
-                yDir = 1;
-                break;
-        }
+    //Returns the unit vector to travel in the given direction
+    public static (int, int) ConvertDirection(Direction dir) => dir switch {
+        Direction.Right => (0, 1),
+        Direction.Down => (1, 0),
+        Direction.Left => (0, -1),
+        Direction.Up => (-1, 0),
+        _ => throw new ArgumentOutOfRangeException(nameof(dir), dir, null),
+    };
 
-        return (xDir, yDir);
-    }
+    //Returns the given direction's "complement", i.e. the next iterative direction to search for the wall.
+    //Used to keep the program's "right hand" on the wall at all times
+    public static Direction ComplementDirection(Direction dir) => dir switch {
+        Direction.Right => Direction.Down,
+        Direction.Down => Direction.Left,
+        Direction.Left => Direction.Up,
+        Direction.Up => Direction.Right,
+        _ => throw new ArgumentOutOfRangeException(nameof(dir), dir, null),
+    };
+
+    //Returns the inverse of the passed direction
+    public static Direction InvertDirection(Direction dir) => dir switch {
+        Direction.Right => Direction.Left,
+        Direction.Down => Direction.Up,
+        Direction.Left => Direction.Right,
+        Direction.Up => Direction.Down,
+        _ => throw new ArgumentOutOfRangeException(nameof(dir), dir, null),
+    };
 
     public static void PrintGrid(int[,] grid, bool unformatted) {
         int length = grid.GetLength(0);
@@ -344,56 +347,6 @@ class HamiltonianCycle {
 
         return (true, orderVals);
     }
-
-    public static bool FollowGuide2(int x, int y, int currNum, Direction dir, bool lost, int[,] grid) {
-        int length = grid.GetLength(0);
-        int width = grid.GetLength(1);
-
-        //Check every direction starting with current direction
-        Direction nextDir = dir;
-        do {
-            if((currNum > ((length + 1) / 2) * ((width + 1) / 2))) return true;
-          
-            var (i, j) = ConvertDirection(ComplementDirection(nextDir));
-            if(!(x >= length || x < 0 || y >= width || y < 0 || (grid[x, y] != 0 && grid[x, y] != -2))) {
-
-                if(!(x + i >= length || x + i < 0 || y + j >= width || y + j < 0)) {
-                    if(!((x == 0 || x == length - 1) && (y == 0 || y == width - 1)) && grid[x + i, y + j] != -1) {
-                        if(!lost) lost = true;
-                        else return false;
-                    } else 
-                        lost = false;
-
-                    if(grid[x, y] == 0) {
-                        grid[x, y] = currNum++;
-                    }
-                }
-            }
-            dir = nextDir;
-            nextDir = ComplementDirection(nextDir);
-            x += i;
-            y += j;
-        } while(nextDir != dir); 
-
-        return false;
-    }
-
-    public static Direction ComplementDirection(Direction dir) => dir switch {
-            Direction.Right => Direction.Down,
-            Direction.Down => Direction.Left,
-            Direction.Left => Direction.Up,
-            Direction.Up => Direction.Right,
-            _ => throw new ArgumentOutOfRangeException(nameof(dir), dir, null),
-        };
-
-    public static Direction InvertDirection(Direction dir) => dir switch {
-            Direction.Right => Direction.Left,
-            Direction.Down => Direction.Up,
-            Direction.Left => Direction.Right,
-            Direction.Up => Direction.Down,
-            _ => throw new ArgumentOutOfRangeException(nameof(dir), dir, null),
-        };
-
 
     public static int[,] CleanUpGrid(int[,] grid) {
         int length = grid.GetLength(0);
