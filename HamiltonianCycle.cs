@@ -249,6 +249,7 @@ class HamiltonianCycle {
         int lenGrid = grid.GetLength(0);
         int widthGrid = grid.GetLength(1);
 
+        //Populate grid with 0 for final nodes, -1 for walls between nodes and -2 for useless spaces
         for(int x = 0; x < lenGrid; x++) {
             for(int y = 0; y < widthGrid; y++)
             {
@@ -260,6 +261,7 @@ class HamiltonianCycle {
             }
         }
 
+        //Turn each wall in the tree into it's 2 grid counterparts
         for(int x = 0; x < lenWalls; x++) {
             for(int y = 0; y < widthWalls; y++) {
                 switch ( (x % 2, y % 2) )
@@ -283,6 +285,8 @@ class HamiltonianCycle {
             }
         }
 
+
+        //Changed useless -1 walls to -2 to represent useless spaces
         for(int x = 0; x < lenGrid; x++) {
             for(int y = 0; y < widthGrid; y++) {
                 if(x != 0 && x != lenGrid - 1 && y != 0 && y != widthGrid - 1 && grid[x, y] != 0 && grid[x, y - 1] == -2 && grid[x, y + 1] == -2 && grid[x + 1, y] == -2 && grid[x - 1, y] == -2) 
@@ -349,7 +353,7 @@ class HamiltonianCycle {
         Direction nextDir = dir;
         do {
             if((currNum > ((length + 1) / 2) * ((width + 1) / 2))) return true;
-
+          
             var (i, j) = ConvertDirection(ComplementDirection(nextDir));
             if(!(x >= length || x < 0 || y >= width || y < 0 || (grid[x, y] != 0 && grid[x, y] != -2))) {
 
